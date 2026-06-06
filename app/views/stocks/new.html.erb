@@ -2,7 +2,10 @@
 
 <main class="stock-page">
   <section class="stock-form-panel">
-    <h1>Add Stock</h1>
+    <div class="page-heading">
+      <h1>Add Stock</h1>
+      <%= link_to "View Billing", billing_path, class: "nav-button" %>
+    </div>
 
     <% if @stock.errors.any? %>
       <div class="error-message">

@@ -28,45 +28,107 @@ end %>
   </section>
 
   <section class="billing-section items-section">
-    <div class="section-heading">
-      <h2>Items</h2>
+    <div class="section-heading shop-heading">
+      <div>
+        <h2>Items</h2>
+        <p>Click an item to add it to cart.</p>
+      </div>
+
+      <div class="heading-actions">
+        <%= link_to "Add Stock", new_stock_path, class: "nav-button" %>
+
+        <button type="button" class="mini-cart-button" id="topCartButton">
+          View Cart <span id="topCartCount">0</span>
+        </button>
+      </div>
     </div>
 
     <div class="items-grid" id="itemsGrid"></div>
   </section>
 
-  <section class="billing-section bill-section">
-    <div class="section-heading">
-      <h2>Bill</h2>
-    </div>
+  <div class="cart-window hidden" id="cartWindow" aria-hidden="true">
+    <div class="cart-dialog" role="dialog" aria-modal="true" aria-labelledby="cartTitle">
+      <div class="cart-dialog-header">
+        <h2 id="cartTitle">Cart</h2>
+        <button type="button" class="icon-button" id="closeCartButton" aria-label="Close cart">
+          X
+        </button>
+      </div>
 
-    <div class="bill-list" id="billList">
-      <p class="empty-bill">Click an item to add it to the bill.</p>
-    </div>
+      <div class="cart-dialog-list" id="cartDialogList"></div>
 
-    <div class="bill-total">
-      <span>Total</span>
-      <strong id="billTotal">Rs. 0.00</strong>
-    </div>
+      <div class="cart-dialog-footer">
+        <div class="bill-total">
+          <span>Total</span>
+          <strong id="cartDialogTotal">Rs. 0.00</strong>
+        </div>
 
-    <button type="button" class="checkout-button" id="checkoutButton">
-      Checkout
-    </button>
-  </section>
+        <button type="button" class="cash-button" id="cashPaymentButton">
+          Pay By Cash
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-window hidden" id="paymentWindow" aria-hidden="true">
+    <div class="payment-dialog" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
+      <div class="cart-dialog-header">
+        <h2 id="paymentTitle">Cash Payment</h2>
+        <button type="button" class="icon-button" id="closePaymentButton" aria-label="Close payment">
+          X
+        </button>
+      </div>
+
+      <div class="payment-row">
+        <span>Total Payment</span>
+        <strong id="paymentTotal">Rs. 0.00</strong>
+      </div>
+
+      <label class="cash-field" for="cashReceived">
+        Cash Received
+        <input type="number" id="cashReceived" min="0" step="0.01" placeholder="Enter cash amount">
+      </label>
+
+      <div class="payment-row">
+        <span id="paymentBalanceLabel">Balance Due</span>
+        <strong id="paymentBalance">Rs. 0.00</strong>
+      </div>
+
+      <button type="button" class="pay-button" id="payButton" disabled>
+        Pay
+      </button>
+    </div>
+  </div>
 </main>
 
 <script>
   (() => {
     const billingPage = document.querySelector(".billing-page");
     const itemsGrid = document.getElementById("itemsGrid");
-    const billList = document.getElementById("billList");
-    const billTotal = document.getElementById("billTotal");
-    const checkoutButton = document.getElementById("checkoutButton");
+    const topCartCount = document.getElementById("topCartCount");
+    const topCartButton = document.getElementById("topCartButton");
+    const cartWindow = document.getElementById("cartWindow");
+    const closeCartButton = document.getElementById("closeCartButton");
+    const cartDialogList = document.getElementById("cartDialogList");
+    const cartDialogTotal = document.getElementById("cartDialogTotal");
+    const cashPaymentButton = document.getElementById("cashPaymentButton");
+    const paymentWindow = document.getElementById("paymentWindow");
+    const closePaymentButton = document.getElementById("closePaymentButton");
+    const paymentTotal = document.getElementById("paymentTotal");
+    const paymentBalanceLabel = document.getElementById("paymentBalanceLabel");
+    const paymentBalance = document.getElementById("paymentBalance");
+    const cashReceived = document.getElementById("cashReceived");
+    const payButton = document.getElementById("payButton");
     const categoryButtons = document.querySelectorAll(".category-button");
     const stocks = JSON.parse(billingPage.dataset.stockItems);
-    const bill = new Map();
+    const cart = new Map();
 
     const formatPrice = (price) => `Rs. ${Number(price).toFixed(2)}`;
+    const cartLines = () => Array.from(cart.values());
+    const cartQuantity = () => cartLines().reduce((total, line) => total + line.quantity, 0);
+    const cartAmount = () => {
+      return cartLines().reduce((total, line) => total + (line.price * line.quantity), 0);
+    };
 
     const escapeHtml = (value) => {
       const div = document.createElement("div");
@@ -74,12 +136,32 @@ end %>
       return div.innerHTML;
     };
 
-    const billLines = () => Array.from(bill.values());
+    const addToCart = (stock) => {
+      const existingLine = cart.get(stock.id);
 
-    const billAmount = () => {
-      return billLines().reduce((total, line) => {
-        return total + (line.price * line.quantity);
-      }, 0);
+      cart.set(stock.id, {
+        ...stock,
+        quantity: existingLine ? existingLine.quantity + 1 : 1
+      });
+
+      renderCart();
+    };
+
+    const updateQuantity = (stockId, change) => {
+      const line = cart.get(Number(stockId));
+
+      if (!line) return;
+
+      const nextQuantity = line.quantity + change;
+
+      if (nextQuantity <= 0) {
+        cart.delete(line.id);
+      } else {
+        cart.set(line.id, { ...line, quantity: nextQuantity });
+      }
+
+      renderCart();
+      renderPayment();
     };
 
     const renderItems = (category = "all") => {
@@ -97,65 +179,137 @@ end %>
       visibleStocks.forEach((stock) => {
         const card = document.createElement("button");
         const image = document.createElement("img");
+        const details = document.createElement("span");
         const name = document.createElement("span");
-        const price = document.createElement("span");
+        const category = document.createElement("span");
+        const footer = document.createElement("span");
+        const price = document.createElement("strong");
+        const addText = document.createElement("span");
 
         card.type = "button";
         card.className = "item-card";
         card.dataset.stockId = stock.id;
         image.src = stock.imagePath;
         image.alt = stock.name;
+        details.className = "item-details";
         name.className = "item-name";
         name.textContent = stock.name;
+        category.className = "item-category";
+        category.textContent = stock.category;
+        footer.className = "item-footer";
         price.className = "item-price";
         price.textContent = formatPrice(stock.price);
+        addText.className = "item-add";
+        addText.textContent = "Add";
 
-        card.append(image, name, price);
+        details.append(name, category);
+        footer.append(price, addText);
+        card.append(image, details, footer);
         itemsGrid.appendChild(card);
       });
     };
 
-    const renderBill = () => {
-      billList.innerHTML = "";
-      let total = 0;
+    const renderCartDialog = () => {
+      cartDialogList.innerHTML = "";
 
-      if (bill.size === 0) {
-        billList.innerHTML = '<p class="empty-bill">Click an item to add it to the bill.</p>';
-        billTotal.textContent = formatPrice(0);
+      if (cart.size === 0) {
+        cartDialogList.innerHTML = '<p class="empty-bill">Your cart is empty.</p>';
         return;
       }
 
-      bill.forEach((line) => {
-        const lineTotal = line.price * line.quantity;
-        const detail = document.createElement("div");
-        const itemName = document.createElement("strong");
-        const quantity = document.createElement("span");
-        const subtotal = document.createElement("span");
+      cartLines().forEach((line) => {
         const row = document.createElement("div");
+        const image = document.createElement("img");
+        const info = document.createElement("div");
+        const name = document.createElement("strong");
+        const price = document.createElement("span");
+        const controls = document.createElement("div");
+        const minus = document.createElement("button");
+        const quantity = document.createElement("span");
+        const plus = document.createElement("button");
+        const total = document.createElement("strong");
 
-        total += lineTotal;
+        row.className = "cart-dialog-row";
+        image.src = line.imagePath;
+        image.alt = line.name;
+        info.className = "cart-item-info";
+        name.textContent = line.name;
+        price.textContent = formatPrice(line.price);
+        controls.className = "quantity-controls";
+        minus.type = "button";
+        minus.textContent = "-";
+        minus.dataset.cartAction = "minus";
+        minus.dataset.stockId = line.id;
+        quantity.textContent = line.quantity;
+        plus.type = "button";
+        plus.textContent = "+";
+        plus.dataset.cartAction = "plus";
+        plus.dataset.stockId = line.id;
+        total.textContent = formatPrice(line.price * line.quantity);
 
-        row.className = "bill-row";
-        itemName.textContent = line.name;
-        quantity.textContent = `${line.quantity} x ${formatPrice(line.price)}`;
-        subtotal.textContent = formatPrice(lineTotal);
-        detail.append(itemName, quantity);
-        row.append(detail, subtotal);
-        billList.appendChild(row);
+        info.append(name, price);
+        controls.append(minus, quantity, plus);
+        row.append(image, info, controls, total);
+        cartDialogList.appendChild(row);
       });
-
-      billTotal.textContent = formatPrice(total);
     };
 
-    const printReceipt = () => {
-      const lines = billLines();
+    const renderPayment = () => {
+      const total = cartAmount();
+      const received = Number(cashReceived.value || 0);
+      const difference = received - total;
 
-      if (lines.length === 0) {
-        alert("Please add at least one item before checkout.");
+      paymentTotal.textContent = formatPrice(total);
+      paymentBalanceLabel.textContent = difference >= 0 ? "Change" : "Balance Due";
+      paymentBalance.textContent = formatPrice(Math.abs(difference));
+      payButton.disabled = cart.size === 0 || difference < 0;
+    };
+
+    const renderCart = () => {
+      const total = cartAmount();
+      const quantity = cartQuantity();
+
+      cartDialogTotal.textContent = formatPrice(total);
+      topCartCount.textContent = quantity;
+      cashPaymentButton.disabled = cart.size === 0;
+      renderCartDialog();
+    };
+
+    const openCart = () => {
+      if (cart.size === 0) {
+        alert("Your cart is empty.");
         return;
       }
 
-      const receiptWindow = window.open("", "_blank", "width=420,height=640");
+      cartWindow.classList.remove("hidden");
+      cartWindow.setAttribute("aria-hidden", "false");
+    };
+
+    const closeCart = () => {
+      cartWindow.classList.add("hidden");
+      cartWindow.setAttribute("aria-hidden", "true");
+    };
+
+    const openPayment = () => {
+      if (cart.size === 0) {
+        alert("Your cart is empty.");
+        return;
+      }
+
+      cashReceived.value = "";
+      renderPayment();
+      paymentWindow.classList.remove("hidden");
+      paymentWindow.setAttribute("aria-hidden", "false");
+      cashReceived.focus();
+    };
+
+    const closePayment = () => {
+      paymentWindow.classList.add("hidden");
+      paymentWindow.setAttribute("aria-hidden", "true");
+    };
+
+    const printReceipt = (lines, total, received) => {
+      const receiptWindow = window.open("", "_blank", "width=430,height=680");
 
       if (!receiptWindow) {
         alert("Please allow popup windows to print the receipt.");
@@ -224,12 +378,21 @@ end %>
                 text-align: right;
               }
 
-              .receipt-total {
-                display: flex;
-                justify-content: space-between;
+              .receipt-summary {
+                display: grid;
+                gap: 8px;
                 margin-top: 18px;
                 padding-top: 14px;
                 border-top: 2px solid #111827;
+              }
+
+              .receipt-summary div {
+                display: flex;
+                justify-content: space-between;
+                gap: 16px;
+              }
+
+              .receipt-total {
                 font-size: 20px;
                 font-weight: 700;
               }
@@ -251,9 +414,19 @@ end %>
                 ${receiptRows}
               </tbody>
             </table>
-            <div class="receipt-total">
-              <span>Total</span>
-              <span>${formatPrice(billAmount())}</span>
+            <div class="receipt-summary">
+              <div class="receipt-total">
+                <span>Total</span>
+                <span>${formatPrice(total)}</span>
+              </div>
+              <div>
+                <span>Cash Received</span>
+                <span>${formatPrice(received)}</span>
+              </div>
+              <div>
+                <span>Change</span>
+                <span>${formatPrice(received - total)}</span>
+              </div>
             </div>
           </body>
         </html>
@@ -278,18 +451,49 @@ end %>
       if (!card) return;
 
       const stock = stocks.find((item) => String(item.id) === card.dataset.stockId);
-      const existingLine = bill.get(stock.id);
+      if (!stock) return;
 
-      bill.set(stock.id, {
-        ...stock,
-        quantity: existingLine ? existingLine.quantity + 1 : 1
-      });
-
-      renderBill();
+      addToCart(stock);
     });
 
-    checkoutButton.addEventListener("click", printReceipt);
+    cartDialogList.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-cart-action]");
+
+      if (!button) return;
+
+      updateQuantity(button.dataset.stockId, button.dataset.cartAction === "plus" ? 1 : -1);
+    });
+
+    topCartButton.addEventListener("click", openCart);
+    closeCartButton.addEventListener("click", closeCart);
+    cashPaymentButton.addEventListener("click", openPayment);
+    closePaymentButton.addEventListener("click", closePayment);
+    cashReceived.addEventListener("input", renderPayment);
+
+    payButton.addEventListener("click", () => {
+      const total = cartAmount();
+      const received = Number(cashReceived.value || 0);
+      const paidLines = cartLines();
+
+      if (received < total) return;
+
+      printReceipt(paidLines, total, received);
+      alert(`Payment successful. Change: ${formatPrice(received - total)}`);
+      cart.clear();
+      closePayment();
+      closeCart();
+      renderCart();
+    });
+
+    cartWindow.addEventListener("click", (event) => {
+      if (event.target === cartWindow) closeCart();
+    });
+
+    paymentWindow.addEventListener("click", (event) => {
+      if (event.target === paymentWindow) closePayment();
+    });
 
     renderItems();
+    renderCart();
   })();
 </script>
