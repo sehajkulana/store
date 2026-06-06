@@ -1,0 +1,42 @@
+<% content_for :title, "Add Stock" %>
+
+<main class="stock-page">
+  <section class="stock-form-panel">
+    <h1>Add Stock</h1>
+
+    <% if @stock.errors.any? %>
+      <div class="error-message">
+        <p>Please fix the following:</p>
+        <ul>
+          <% @stock.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <%= form_with model: @stock, local: true, html: { multipart: true, class: "stock-form" } do |form| %>
+      <div class="form-field">
+        <%= form.label :category %>
+        <%= form.text_field :category, required: true, placeholder: "Enter category" %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :name %>
+        <%= form.text_field :name, required: true, placeholder: "Enter name" %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :price %>
+        <%= form.number_field :price, required: true, min: 0, step: "0.01", placeholder: "Enter price" %>
+      </div>
+
+      <div class="form-field">
+        <%= form.label :image %>
+        <%= form.file_field :image, required: true, accept: "image/*" %>
+      </div>
+
+      <%= form.submit "Insert Stock", class: "submit-button" %>
+    <% end %>
+  </section>
+</main>

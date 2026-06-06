@@ -1,0 +1,295 @@
+<% content_for :title, "Billing" %>
+
+<% stock_items = @stocks.map do |stock|
+  {
+    id: stock.id,
+    category: stock.category,
+    name: stock.name,
+    price: stock.price.to_f,
+    imagePath: stock.image_path
+  }
+end %>
+
+<main class="billing-page" data-stock-items="<%= json_escape(stock_items.to_json) %>">
+  <section class="billing-section category-section">
+    <div class="section-heading">
+      <h1>Categories</h1>
+    </div>
+
+    <button type="button" class="category-button active" data-category="all">
+      All
+    </button>
+
+    <% @categories.each do |category| %>
+      <button type="button" class="category-button" data-category="<%= category %>">
+        <%= category %>
+      </button>
+    <% end %>
+  </section>
+
+  <section class="billing-section items-section">
+    <div class="section-heading">
+      <h2>Items</h2>
+    </div>
+
+    <div class="items-grid" id="itemsGrid"></div>
+  </section>
+
+  <section class="billing-section bill-section">
+    <div class="section-heading">
+      <h2>Bill</h2>
+    </div>
+
+    <div class="bill-list" id="billList">
+      <p class="empty-bill">Click an item to add it to the bill.</p>
+    </div>
+
+    <div class="bill-total">
+      <span>Total</span>
+      <strong id="billTotal">Rs. 0.00</strong>
+    </div>
+
+    <button type="button" class="checkout-button" id="checkoutButton">
+      Checkout
+    </button>
+  </section>
+</main>
+
+<script>
+  (() => {
+    const billingPage = document.querySelector(".billing-page");
+    const itemsGrid = document.getElementById("itemsGrid");
+    const billList = document.getElementById("billList");
+    const billTotal = document.getElementById("billTotal");
+    const checkoutButton = document.getElementById("checkoutButton");
+    const categoryButtons = document.querySelectorAll(".category-button");
+    const stocks = JSON.parse(billingPage.dataset.stockItems);
+    const bill = new Map();
+
+    const formatPrice = (price) => `Rs. ${Number(price).toFixed(2)}`;
+
+    const escapeHtml = (value) => {
+      const div = document.createElement("div");
+      div.textContent = value;
+      return div.innerHTML;
+    };
+
+    const billLines = () => Array.from(bill.values());
+
+    const billAmount = () => {
+      return billLines().reduce((total, line) => {
+        return total + (line.price * line.quantity);
+      }, 0);
+    };
+
+    const renderItems = (category = "all") => {
+      const visibleStocks = category === "all"
+        ? stocks
+        : stocks.filter((stock) => stock.category === category);
+
+      itemsGrid.innerHTML = "";
+
+      if (visibleStocks.length === 0) {
+        itemsGrid.innerHTML = '<p class="empty-items">No items found.</p>';
+        return;
+      }
+
+      visibleStocks.forEach((stock) => {
+        const card = document.createElement("button");
+        const image = document.createElement("img");
+        const name = document.createElement("span");
+        const price = document.createElement("span");
+
+        card.type = "button";
+        card.className = "item-card";
+        card.dataset.stockId = stock.id;
+        image.src = stock.imagePath;
+        image.alt = stock.name;
+        name.className = "item-name";
+        name.textContent = stock.name;
+        price.className = "item-price";
+        price.textContent = formatPrice(stock.price);
+
+        card.append(image, name, price);
+        itemsGrid.appendChild(card);
+      });
+    };
+
+    const renderBill = () => {
+      billList.innerHTML = "";
+      let total = 0;
+
+      if (bill.size === 0) {
+        billList.innerHTML = '<p class="empty-bill">Click an item to add it to the bill.</p>';
+        billTotal.textContent = formatPrice(0);
+        return;
+      }
+
+      bill.forEach((line) => {
+        const lineTotal = line.price * line.quantity;
+        const detail = document.createElement("div");
+        const itemName = document.createElement("strong");
+        const quantity = document.createElement("span");
+        const subtotal = document.createElement("span");
+        const row = document.createElement("div");
+
+        total += lineTotal;
+
+        row.className = "bill-row";
+        itemName.textContent = line.name;
+        quantity.textContent = `${line.quantity} x ${formatPrice(line.price)}`;
+        subtotal.textContent = formatPrice(lineTotal);
+        detail.append(itemName, quantity);
+        row.append(detail, subtotal);
+        billList.appendChild(row);
+      });
+
+      billTotal.textContent = formatPrice(total);
+    };
+
+    const printReceipt = () => {
+      const lines = billLines();
+
+      if (lines.length === 0) {
+        alert("Please add at least one item before checkout.");
+        return;
+      }
+
+      const receiptWindow = window.open("", "_blank", "width=420,height=640");
+
+      if (!receiptWindow) {
+        alert("Please allow popup windows to print the receipt.");
+        return;
+      }
+
+      const receiptRows = lines.map((line) => {
+        const lineTotal = line.price * line.quantity;
+
+        return `
+          <tr>
+            <td>${escapeHtml(line.name)}</td>
+            <td>${line.quantity}</td>
+            <td>${formatPrice(line.price)}</td>
+            <td>${formatPrice(lineTotal)}</td>
+          </tr>
+        `;
+      }).join("");
+
+      receiptWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt</title>
+            <style>
+              body {
+                margin: 0;
+                padding: 24px;
+                color: #111827;
+                font-family: Arial, Helvetica, sans-serif;
+              }
+
+              h1 {
+                margin: 0;
+                font-size: 24px;
+                text-align: center;
+              }
+
+              .receipt-date {
+                margin: 8px 0 24px;
+                color: #4b5563;
+                text-align: center;
+              }
+
+              table {
+                width: 100%;
+                border-collapse: collapse;
+              }
+
+              th,
+              td {
+                padding: 10px 6px;
+                border-bottom: 1px solid #d1d5db;
+                text-align: left;
+              }
+
+              th:nth-child(2),
+              td:nth-child(2) {
+                text-align: center;
+              }
+
+              th:nth-child(3),
+              th:nth-child(4),
+              td:nth-child(3),
+              td:nth-child(4) {
+                text-align: right;
+              }
+
+              .receipt-total {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 18px;
+                padding-top: 14px;
+                border-top: 2px solid #111827;
+                font-size: 20px;
+                font-weight: 700;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Bill Store Receipt</h1>
+            <p class="receipt-date">${new Date().toLocaleString()}</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Qty</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${receiptRows}
+              </tbody>
+            </table>
+            <div class="receipt-total">
+              <span>Total</span>
+              <span>${formatPrice(billAmount())}</span>
+            </div>
+          </body>
+        </html>
+      `);
+
+      receiptWindow.document.close();
+      receiptWindow.focus();
+      receiptWindow.print();
+    };
+
+    categoryButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        categoryButtons.forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        renderItems(button.dataset.category);
+      });
+    });
+
+    itemsGrid.addEventListener("click", (event) => {
+      const card = event.target.closest(".item-card");
+
+      if (!card) return;
+
+      const stock = stocks.find((item) => String(item.id) === card.dataset.stockId);
+      const existingLine = bill.get(stock.id);
+
+      bill.set(stock.id, {
+        ...stock,
+        quantity: existingLine ? existingLine.quantity + 1 : 1
+      });
+
+      renderBill();
+    });
+
+    checkoutButton.addEventListener("click", printReceipt);
+
+    renderItems();
+  })();
+</script>

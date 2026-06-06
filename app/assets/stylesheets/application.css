@@ -1,0 +1,289 @@
+/*
+ * This is a manifest file that'll be compiled into application.css.
+ *
+ * With Propshaft, assets are served efficiently without preprocessing steps. You can still include
+ * application-wide styles in this file, but keep in mind that CSS precedence will follow the standard
+ * cascading order, meaning styles declared later in the document or manifest will override earlier ones,
+ * depending on specificity.
+ *
+ * Consider organizing styles into separate files for maintainability.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #1f2937;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f3f5f8;
+}
+
+.stock-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 16px;
+}
+
+.stock-form-panel {
+  width: min(100%, 520px);
+  padding: 28px;
+  border: 1px solid #d7dde7;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 45px rgba(17, 24, 39, 0.08);
+}
+
+.stock-form-panel h1 {
+  margin: 0 0 24px;
+  color: #111827;
+  font-size: 28px;
+}
+
+.stock-form {
+  display: grid;
+  gap: 18px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.form-field label {
+  color: #374151;
+  font-weight: 700;
+}
+
+.form-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #c8d1df;
+  border-radius: 6px;
+  font: inherit;
+}
+
+.form-field input:focus {
+  border-color: #2563eb;
+  outline: 3px solid rgba(37, 99, 235, 0.18);
+}
+
+.submit-button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  background: #2563eb;
+  cursor: pointer;
+}
+
+.submit-button:hover {
+  background: #1d4ed8;
+}
+
+.error-message {
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid #f3b8b8;
+  border-radius: 6px;
+  color: #7f1d1d;
+  background: #fff1f2;
+}
+
+.error-message p {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.error-message ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.billing-page {
+  display: flex;
+  min-height: 100vh;
+  gap: 18px;
+  padding: 18px;
+  background: #eef2f7;
+}
+
+.billing-section {
+  min-height: calc(100vh - 36px);
+  padding: 18px;
+  border: 1px solid #d8dee9;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: auto;
+}
+
+.category-section {
+  flex: 0 0 220px;
+}
+
+.items-section {
+  flex: 1 1 auto;
+}
+
+.bill-section {
+  flex: 0 0 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.section-heading {
+  margin-bottom: 16px;
+}
+
+.section-heading h1,
+.section-heading h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+}
+
+.category-button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #1f2937;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.category-button:hover,
+.category-button.active {
+  border-color: #2563eb;
+  color: #ffffff;
+  background: #2563eb;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.item-card {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #d6dde8;
+  border-radius: 8px;
+  color: #1f2937;
+  font: inherit;
+  text-align: left;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.item-card:hover {
+  border-color: #2563eb;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.12);
+}
+
+.item-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+.item-name {
+  color: #111827;
+  font-weight: 700;
+}
+
+.item-price {
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.bill-list {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 12px;
+}
+
+.bill-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.bill-row div {
+  display: grid;
+  gap: 4px;
+}
+
+.bill-row strong {
+  color: #111827;
+}
+
+.bill-row span {
+  color: #4b5563;
+}
+
+.bill-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 2px solid #111827;
+  color: #111827;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.checkout-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 6px;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 700;
+  background: #16a34a;
+  cursor: pointer;
+}
+
+.checkout-button:hover {
+  background: #15803d;
+}
+
+.empty-items,
+.empty-bill {
+  margin: 0;
+  color: #6b7280;
+}
+
+@media (max-width: 900px) {
+  .billing-page {
+    flex-direction: column;
+  }
+
+  .billing-section,
+  .category-section,
+  .bill-section {
+    flex: auto;
+    min-height: auto;
+  }
+}
